@@ -228,10 +228,15 @@ internal static class RuItemNames
         ["Сила Трада"] = "Thrud's Might",
         ["Сидерий Утреда"] = "Uhtred's Sidereus",
         ["Резня Вораны"] = "Vorana's Carnage",
+        ["Наследие Альдура"] = "Aldur's Legacy",
         ["Aldur's Legacy"] = "Aldur's Legacy",
+        ["Предательство Альдура"] = "Betrayal of Aldur",
         ["Betrayal of Aldur"] = "Betrayal of Aldur",
+        ["Дыхание Альдура"] = "Breath of Aldur",
         ["Breath of Aldur"] = "Breath of Aldur",
+        ["Гнев Альдура"] = "Ire of Aldur",
         ["Ire of Aldur"] = "Ire of Aldur",
+        ["Страсть Альдура"] = "Passion of Aldur",
         ["Passion of Aldur"] = "Passion of Aldur",
 
         // --- Desecration currency (Abyss-family stackable currency, того же раздела) ---
@@ -291,6 +296,7 @@ internal static class RuItemNames
         ["Сага Олрота"] = "Olroth's Saga",
         ["Сага Утреда"] = "Uhtred's Saga",
         ["Сага Вораны"] = "Vorana's Saga",
+        ["Сага Альдура"] = "Aldur's Saga",
         ["Aldur's Saga"] = "Aldur's Saga",
 
         // --- Verisium / рунекузнечество (подтверждено) ---
