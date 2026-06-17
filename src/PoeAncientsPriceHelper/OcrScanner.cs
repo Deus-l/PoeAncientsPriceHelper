@@ -347,13 +347,22 @@ internal sealed class OcrScanner : IDisposable
         if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n >= 1)
             return Math.Min(n, 999);
 
-        // "(N)" trailing suffix: NormalizeName turns "(2)" into " 2" at end of string.
-        // Guard against gem-level suffixes ("level 19", "уровень 20") where the trailing
-        // number is the level, not a quantity — in that case the exchange panel always appends
-        // a separate "(N)" so the level number is never the very last token.
-        if (!Regex.IsMatch(normalized, @"\b(level|уровень)\s+\d+$"))
+        // "(N)" trailing suffix: NormalizeName turns "(2)" into " 2" after the item name.
+        // We look for the FIRST digit sequence after the LAST LETTER of the name — not the last
+        // digit in the string — so that exchange-rate numbers or other OCR noise captured by a
+        // wide calibration region (e.g. "масса 2 7" where 7 is the exchange rate) are ignored.
+        // For gem names ("level N" / "уровень N") the level clause is stripped first so the
+        // qty that follows it is visible as the first suffix digit.
+        string s = normalized;
+        var lvl = Regex.Match(s, @"\b(level|уровень)\s+\d+");
+        if (lvl.Success) s = s.Remove(lvl.Index, lvl.Length).Trim();
+
+        int lastLetter = -1;
+        for (int i = s.Length - 1; i >= 0; i--)
+            if (char.IsLetter(s[i])) { lastLetter = i; break; }
+        if (lastLetter >= 0)
         {
-            var q = Regex.Match(normalized, @"\s+(\d{1,3})$");
+            var q = Regex.Match(s.Substring(lastLetter + 1).TrimStart(), @"^(\d{1,3})");
             if (q.Success && int.TryParse(q.Groups[1].Value, out var qty) && qty >= 1)
                 return Math.Min(qty, 999);
         }

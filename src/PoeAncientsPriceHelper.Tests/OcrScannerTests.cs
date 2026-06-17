@@ -77,13 +77,16 @@ public class OcrScannerTests
     [InlineData("nerog 11x ancient rune of discovery", 11)]
     [InlineData("oa a 1x greater orb of transmutation", 1)]
     [InlineData("warding rune of protection i", 1)] // roman numeral, not a multiplier
-    // "(N)" suffix: NormalizeName strips parens → trailing " N" detected as quantity
+    // "(N)" suffix: NormalizeName strips parens → first digit after last letter = qty
     [InlineData("рунный сплав 2", 2)]
     [InlineData("divine orb 3", 3)]
     [InlineData("сфера алхимии 2", 2)]
     [InlineData("uncut skill gem level 20 2", 2)]  // level guard active, qty still extracted
     [InlineData("uncut skill gem level 20 1", 1)]
     [InlineData("неограненный камень умения уровень 20 2", 2)]
+    // Wide calibration region may include exchange-rate number after the qty; must not pick it up
+    [InlineData("стекольная масса 2 7", 2)]        // qty=2, exchange rate=7 on right → returns 2
+    [InlineData("барьерная руна укрепления 1 18", 1)] // qty=1, noise=18 → returns 1
     public void ExtractMultiplier_ReadsQuantity(string input, int expected)
     {
         Assert.Equal(expected, OcrScanner.ExtractMultiplier(input));
