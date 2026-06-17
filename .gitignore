@@ -1,0 +1,29 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Runtime files (generated at runtime, per-user)
+**/config.json
+**/scan_log.txt
+**/debug_ocr.png
+**/custom_prices.json
+
+# Pre-built binary folder (use Releases instead)
+/Program/
+
+# Release archive (attached to GitHub Release, not committed)
+*.zip
+
+# Redundant HTML readme
+README.html
+
+# OS
+.DS_Store
+Thumbs.db
