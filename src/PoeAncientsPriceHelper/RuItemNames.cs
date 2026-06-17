@@ -411,6 +411,40 @@ internal static class RuItemNames
         return dict;
     }
 
+    // Tesseract в режиме rus нередко смешивает Кирилл. и латинские символы-двойники: например,
+    // «расплав» может прийти как «pacплaб» (р→p, а→a, с→c, в→b). Такие строки проваливают
+    // Levenshtein-порог (score < 0.84). Метод приводит все Latin-гомоглифы к кириллическому
+    // эквиваленту ДО поиска, чтобы экономить fuzzy-«кредит» на реальные ошибки OCR.
+    // Применяется только к вводу (OCR-строке) — словарные ключи и так чистая кириллица.
+    private static string FixHomoglyphs(string s)
+    {
+        bool needsFix = false;
+        foreach (char c in s)
+        {
+            if (c is 'a' or 'e' or 'o' or 'p' or 'c' or 'x' or 'y' or 'b')
+            { needsFix = true; break; }
+        }
+        if (!needsFix) return s;
+
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (char c in s)
+        {
+            sb.Append(c switch
+            {
+                'a' => 'а',   // U+0061 → U+0430
+                'e' => 'е',   // U+0065 → U+0435
+                'o' => 'о',   // U+006F → U+043E
+                'p' => 'р',   // U+0070 → U+0440
+                'c' => 'с',   // U+0063 → U+0441
+                'x' => 'х',   // U+0078 → U+0445
+                'y' => 'у',   // U+0079 → U+0443
+                'b' => 'в',   // U+0062 → U+0432
+                _ => c
+            });
+        }
+        return sb.ToString();
+    }
+
     // Переводит нормализованную кириллическую строку OCR в нормализованное каноническое EN-имя,
     // или возвращает null, если ничего не подошло. Сначала точное совпадение, затем fuzzy по
     // самим RU-ключам (расстояние Левенштейна) — это спасает от мелких ошибок распознавания
@@ -419,15 +453,17 @@ internal static class RuItemNames
     public static string? Resolve(string normalizedRuName)
     {
         if (string.IsNullOrEmpty(normalizedRuName)) return null;
-        if (_normalized.TryGetValue(normalizedRuName, out var exact)) return exact;
+        // Унифицируем Latin-гомоглифы → кириллица перед любым сравнением.
+        var unified = FixHomoglyphs(normalizedRuName);
+        if (_normalized.TryGetValue(unified, out var exact)) return exact;
 
         string? best = null;
         double bestScore = FuzzyThreshold;
         foreach (var (ruKey, enKey) in _normalized)
         {
-            if (Math.Abs(ruKey.Length - normalizedRuName.Length) > 3) continue;
-            int dist = ScanEngine.Levenshtein(normalizedRuName, ruKey);
-            double score = 1.0 - (double)dist / Math.Max(normalizedRuName.Length, ruKey.Length);
+            if (Math.Abs(ruKey.Length - unified.Length) > 3) continue;
+            int dist = ScanEngine.Levenshtein(unified, ruKey);
+            double score = 1.0 - (double)dist / Math.Max(unified.Length, ruKey.Length);
             if (score > bestScore) { bestScore = score; best = enKey; }
         }
         return best;
