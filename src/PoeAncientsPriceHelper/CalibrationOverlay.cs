@@ -93,8 +93,14 @@ internal sealed class CalibrationOverlay : Form
         // secondary). The selection rects are stored in physical coords, so convert them for drawing.
         var primary = Screen.PrimaryScreen!.Bounds;
         var titleAt = PointToClient(new Point(primary.Left + 30, primary.Top + 30));
-        g.DrawString("Drag a box around the item list panel, then press ENTER to confirm. ESC to cancel.",
+        using var warnFont = new Font("Segoe UI", 11, FontStyle.Regular);
+        using var warn = new SolidBrush(Color.Yellow);
+        g.DrawString("CALIBRATION  —  draw a box around the exchange item list, then press ENTER",
             titleFont, fg, titleAt.X, titleAt.Y);
+        g.DrawString("⚠  The game must be open and the Exchange Stone panel visible behind this overlay (use Windowed or Borderless Windowed mode, NOT Exclusive Fullscreen)",
+            warnFont, warn, titleAt.X, titleAt.Y + 38);
+        g.DrawString("A preview will appear so you can confirm the selection.  ESC to cancel.",
+            warnFont, fg, titleAt.X, titleAt.Y + 64);
 
         if (_currentDragScreen.Width > 0)
         {

@@ -109,8 +109,14 @@ public partial class MainWindow : MetroWindow
     // internal so the App-level hook (configurable Calibrate key) can trigger it too.
     internal void RunCalibration()
     {
-        var rect = CalibrationOverlay.RunOnStaThread();
-        if (rect is null) return;
+        Rectangle? rect;
+        do
+        {
+            rect = CalibrationOverlay.RunOnStaThread();
+            if (rect is null) return;   // user pressed Esc
+        }
+        while (!CalibrationPreview.Show(rect.Value)); // loop until user confirms the preview
+
         _config.RegionRect = rect.Value;
         ConfigStore.Save(_config);
         Dispatcher.Invoke(() =>
