@@ -333,17 +333,31 @@ internal sealed class OcrScanner : IDisposable
         return dst;
     }
 
-    // The list shows a stack quantity as "Nx" before the item name ("1x", "2x", "14x").
-    // Capture it so the price can be multiplied by the stack size. Read from the raw
-    // normalized string BEFORE StripLeadingNoise removes the marker. Returns 1 when absent.
+    // The list shows a stack quantity either as "Nx" before the item name ("1x", "2x", "14x")
+    // or as a trailing "(N)" suffix — e.g. "Runic Alloy (2)". NormalizeName strips the parens so
+    // "(2)" becomes " 2" at the end of the string. Both forms must be detected so that
+    // BuildPriceRows multiplies the unit price by the correct stack size.
     // [xх]: in Russian OCR mode Tesseract reads the marker using the Cyrillic unicharset, so the
     // glyph that looks like "x" comes back as Cyrillic х (U+0445), not Latin x (U+0078) — same
     // shape, different code point. Without matching both, the quantity marker is invisible in rus mode.
     internal static int ExtractMultiplier(string normalized)
     {
+        // "Nx" / "Nх" leading marker (icon column, e.g. "2x rune")
         var m = Regex.Match(normalized, @"(?<![a-z0-9])(\d{1,3})\s*[xх](?![a-z0-9])");
         if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n >= 1)
             return Math.Min(n, 999);
+
+        // "(N)" trailing suffix: NormalizeName turns "(2)" into " 2" at end of string.
+        // Guard against gem-level suffixes ("level 19", "уровень 20") where the trailing
+        // number is the level, not a quantity — in that case the exchange panel always appends
+        // a separate "(N)" so the level number is never the very last token.
+        if (!Regex.IsMatch(normalized, @"\b(level|уровень)\s+\d+$"))
+        {
+            var q = Regex.Match(normalized, @"\s+(\d{1,3})$");
+            if (q.Success && int.TryParse(q.Groups[1].Value, out var qty) && qty >= 1)
+                return Math.Min(qty, 999);
+        }
+
         return 1;
     }
 

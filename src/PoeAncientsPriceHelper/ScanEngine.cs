@@ -521,9 +521,10 @@ internal sealed class ScanEngine : IDisposable
         var display = new List<PriceRow>(slots.Count);
         foreach (var s in slots.OrderBy(s => s.Y))
         {
-            display.Add(s.Locked
-                ? s.LockedRow
-                : s.Latest with { CenterY = s.Y, HasPrice = false, DivineValue = 0m, ExaltedValue = 0m });
+            // Show the latest price immediately (even before the second confirming pass) so items
+            // are visible as soon as the first read resolves them. Locked rows use the stable
+            // locked position; unlocked rows track their current read position until stabilised.
+            display.Add(s.Locked ? s.LockedRow : s.Latest with { CenterY = s.Y });
         }
         return display;
     }
