@@ -293,9 +293,13 @@ internal static class RuItemNames
         ["Сфера Узазы"] = "Perfect Flux",
         ["Журнал экспедиции"] = "Expedition Logbook",
         ["Сага Медведя"] = "Medved's Saga",
+        ["Medved's Saga"] = "Medved's Saga",
         ["Сага Олрота"] = "Olroth's Saga",
+        ["Olroth's Saga"] = "Olroth's Saga",
         ["Сага Утреда"] = "Uhtred's Saga",
+        ["Uhtred's Saga"] = "Uhtred's Saga",
         ["Сага Вораны"] = "Vorana's Saga",
+        ["Vorana's Saga"] = "Vorana's Saga",
         ["Сага Альдура"] = "Aldur's Saga",
         ["Aldur's Saga"] = "Aldur's Saga",
 

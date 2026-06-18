@@ -77,7 +77,59 @@ internal sealed class OcrScanner : IDisposable
             }
         }
 
+        // Combination panel rows (e.g. "Сага Медведя") have 6 ingredient icons spanning ~50% of
+        // the row width. The standard left cut (~30%) removes cost-rune glyphs but leaves the
+        // ingredient icons, which Tesseract reads as many short Cyrillic tokens. Detect these rows
+        // by their high short-token ratio and retry each one with a wider cut.
+        int widerCut = Math.Min(primaryLeftCut + 100, (int)(regionBitmap.Width * 0.50));
+        if (widerCut > primaryLeftCut + 30)
+        {
+            var result = new List<OcrRow>(rows);
+            for (int i = 0; i < result.Count; i++)
+            {
+                if (!IsLikelyIconNoise(result[i].RawText)) continue;
+                var better = RetrySingleBand(regionBitmap, result[i].CenterY, widerCut, rightCut);
+                if (better is not null &&
+                    (better.NormalizedName.Length > result[i].NormalizedName.Length ||
+                     !IsLikelyIconNoise(better.RawText)))
+                    result[i] = better;
+            }
+            return result;
+        }
+
         return rows;
+    }
+
+    // Returns true when the raw OCR text looks like icon-column pixel garbage rather than real item
+    // text: more than half the whitespace-separated tokens are ≤2 characters (e.g. "я В фев Брадышения т").
+    private static bool IsLikelyIconNoise(string rawText)
+    {
+        if (string.IsNullOrWhiteSpace(rawText)) return false;
+        var tokens = rawText.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length < 3) return false;
+        int shortCount = tokens.Count(t => t.Length <= 2);
+        return shortCount * 2 > tokens.Length;
+    }
+
+    // OCR a single horizontal band of regionBitmap with a different (usually wider) left cut.
+    // Uses _engineA — safe to call after ScanWithCrop completes (both engine tasks have finished).
+    private OcrRow? RetrySingleBand(Bitmap regionBitmap, int centerY, int leftCut, int rightCut)
+    {
+        const int BandHalfHeight = 24;
+        int y0 = Math.Max(0, centerY - BandHalfHeight);
+        int y1 = Math.Min(regionBitmap.Height, centerY + BandHalfHeight);
+        if (y1 <= y0) return null;
+        int cropW = Math.Max(1, regionBitmap.Width - leftCut - rightCut);
+        using var band = CropBitmap(regionBitmap, leftCut, y0, cropW, y1 - y0);
+        using var gray = ToInvertedGray(band);
+        using var upscaled = Upscale(gray, UpscaleFactor);
+        byte[] png = ToPng(upscaled);
+        using var pix = Pix.LoadFromMemory(png);
+        using var page = _engineA.Process(pix, PageSegMode.SingleLine);
+        string text = page.GetText();
+        float conf = page.GetMeanConfidence() * 100f;
+        var (row, _) = BuildRow(text, conf, centerY);
+        return row;
     }
 
     internal static int CalculateLeftCut(int width)
