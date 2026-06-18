@@ -288,7 +288,10 @@ internal sealed class ScanEngine : IDisposable
             // OcrLanguage != "rus").
             string name = ResolveEffectiveName(row.NormalizedName);
 
-            if (name.Contains("runeshape"))
+            // Drop panel headings that OCR picks up as text rows. "runeshape" = a UI element glyph;
+            // "рунотворч" = the "Рунотворческие комбинации" (Runeforging Combinations) panel title;
+            // "runeforging" = same heading in English client.
+            if (name.Contains("runeshape") || name.Contains("рунотворч") || name.Contains("runeforging"))
                 continue;
 
             int stableY = row.CenterY;

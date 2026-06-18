@@ -88,11 +88,16 @@ internal sealed class OcrScanner : IDisposable
             for (int i = 0; i < result.Count; i++)
             {
                 if (!IsLikelyIconNoise(result[i].RawText)) continue;
-                var better = RetrySingleBand(regionBitmap, result[i].CenterY, widerCut, rightCut);
+                var original = result[i];
+                var better = RetrySingleBand(regionBitmap, original.CenterY, widerCut, rightCut);
                 if (better is not null &&
-                    (better.NormalizedName.Length > result[i].NormalizedName.Length ||
+                    (better.NormalizedName.Length > original.NormalizedName.Length ||
                      !IsLikelyIconNoise(better.RawText)))
+                {
+                    lock (_logLock)
+                        _log?.Invoke($"icon-noise retry y={original.CenterY} '{original.RawText.Trim()}' → '{better.NormalizedName}'");
                     result[i] = better;
+                }
             }
             return result;
         }
@@ -428,7 +433,10 @@ internal sealed class OcrScanner : IDisposable
     // e.g. "e l8 n 1x the greatwolf"          → "the greatwolf"
     internal static string StripLeadingNoise(string normalized)
     {
-        var s = Regex.Replace(normalized, @"^(?:\S{1,2}\s+|\S*\d\S*\s+)+", "");
+        // [а-яё]{3} strips exactly-3-char all-Cyrillic leading tokens (e.g. "фев", "ших") that
+        // icon-pixel noise produces. Latin 3-letter words ("gem", "orb") are left intact.
+        // No Russian item name in the dictionary starts with a 3-char word, so no false positives.
+        var s = Regex.Replace(normalized, @"^(?:\S{1,2}\s+|\S*\d\S*\s+|[а-яё]{3}\s+)+", "");
         // If a quantity marker still exists, drop everything before (and including) it
         var qm = Regex.Match(s, @"(?<!\w)\d+\s*[xх]\s+");
         if (qm.Success) s = s.Substring(qm.Index + qm.Length);
